@@ -61,6 +61,7 @@ Usage ( => CH/CP, Multiple Frames): KisekiCHConverter.exe --spritesheetcompress 
 
 # Media ! 
 I originally wrote this in order to allow modification of the sprites, textures and image assets in Kiseki titles, but well... there are much more possibilities with that... take this example:
+
 ![Princess Joshua!](http://i.imgur.com/0DQWdlR.gif "The cutest thing alive falls gracefully.") ![Estelle Victory](http://i.imgur.com/vCt3Mh2.gif "Estelle Victory Pose!") ![Tita S-Craft](http://i.imgur.com/FZjwGOS.gif "Tita S-Craft!")
 ![Tita Gives Up](http://i.imgur.com/eVa44FZ.gif "Don't give up, Tita!") ![Renne Slap](http://i.imgur.com/vJjaLFe.gif "Estelle's attempt to knock some sense into this poor girl") ![Farewell, Phantasma!](http://i.imgur.com/09HYr3O.gif "Farewell, Phantasma!")
 
