@@ -62,8 +62,42 @@ namespace KisekiCHConverter
             }
 
             if (Action == 0) { DisplayHelp(); Environment.Exit(0); }
-            else if (Action == 1) { DecompressFile(); }
-            else if (Action == 2) { CompressFile(); Environment.Exit(0); }
+            else if (Action == 1)
+            {
+                if (Directory.Exists(FilePath))
+                {
+                    string[] FilesInDirectory = Directory.GetFiles(FilePath, "*._CH");
+                    for (int x = 0; x < FilesInDirectory.Length; x++)
+                    {
+                        FilePath = FilesInDirectory[x];
+                        DecompressFile();
+                        ImageHeight = 0;
+                        ImageWidth = 0;
+                    }
+                }
+                else
+                {
+                    DecompressFile();
+                }
+            }
+            else if (Action == 2)
+            {
+                if (Directory.Exists(FilePath))
+                {
+                    string[] FilesInDirectory = Directory.GetFiles(FilePath);
+                    for (int x = 0; x < FilesInDirectory.Length; x++)
+                    {
+                        FilePath = FilesInDirectory[x];
+                        CompressFile();
+                    }
+                }
+                else
+                {
+                    CompressFile();
+                }
+                
+                Environment.Exit(0);
+            }
             else if (Action == 3) { CompressSpriteSheet(); Environment.Exit(0); }
 
             if (ConvertToPNGFlag && NoSplit)
@@ -72,7 +106,7 @@ namespace KisekiCHConverter
             }
             else if (ConvertToPNGFlag && ! NoSplit)
             {
-                string[] FilesInDirectory = Directory.GetFiles(FileDirectory + FileName.Substring(0, FileName.Length - 4).Trim() + @"\");
+                string[] FilesInDirectory = Directory.GetFiles(FileDirectory, "*.dds");
                 foreach (string DDSFile in FilesInDirectory)
                 {
                     LoadDDSSavePNG(DDSFile, DDSFile.Substring(0, DDSFile.Length - 3) + "png");
