@@ -35,8 +35,8 @@ namespace KisekiCHConverter
         static bool WasCPFile; // Used for verification whether the rest of a certain series of steps would be necessary for completion. Used once due lazy programming.
         static ushort ChipSpriteSheetAmountOfFrames; // Derived from ._CP File for Sprite Sheets, first ushort.
         static ushort ChipSpriteAmountOfChunks; // Derived from ._CH File for Sprite Sheets, first ushort.
-        const ushort ChipWidth = 256; // Width of chips/sprite animations.
         static ushort ChunkLevel = 0; // Which level is the chunk on currently in terms of height? 1 = Top;
+        const ushort ChipWidth = 256; // Width of chips/sprite animations.
         const byte ChunkWidth = 16;
 
         static List<byte> CPFileList = new List<byte>(); // This one is used for building the CPFile.
@@ -73,8 +73,20 @@ namespace KisekiCHConverter
                     {
                         FilePath = FilesInDirectory[x];
                         DecompressFile();
+
+                        // Reset all variables!
                         ImageHeight = 0;
                         ImageWidth = 0;
+                        ChipSpriteSheetAmountOfFrames = 0;
+                        OriginalFileSize = 0;
+                        MultiplierColourSpace = 0;
+                        ChipSpriteAmountOfChunks = 0;
+                        WasCPFile = false;
+                        CPFile = null;
+                        HeaderName = null;
+                        CHFile = null;
+                        CHHeader = null;
+                        ChunkLevel = 0; // Which level is the chunk on currently in terms of height? 1 = Top;
                     }
                 }
                 else
@@ -714,7 +726,12 @@ namespace KisekiCHConverter
                     // Absolute position of pixel to draw in the new bitmap to be drawn.
                     Position = (uint) (OriginalPosition + (ImageWidth * x * BytesPerPixel) + (y * BytesPerPixel) );
                     PositionInChunkToDraw = (uint)( (y*BytesPerPixel) + (x*ChunkWidth*BytesPerPixel)); // Position in chunk to draw to be copied.
-                    ImageToDrawOn[Position] = ChunkToDraw[PositionInChunkToDraw]; ImageToDrawOn[Position + 1] = ChunkToDraw[PositionInChunkToDraw + 1];  // In the end, draw the chunk.
+
+                    try
+                    {
+                        ImageToDrawOn[Position] = ChunkToDraw[PositionInChunkToDraw]; ImageToDrawOn[Position + 1] = ChunkToDraw[PositionInChunkToDraw + 1];  // In the end, draw the chunk. }
+                    }
+                    catch { Console.WriteLine("An index overflow occured when copying individual pixel data of a spritesheet chunk, the image output may be incomplete. | " + FilePath ); }
                 }
             }
 
