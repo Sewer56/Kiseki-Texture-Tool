@@ -25,6 +25,7 @@ namespace KisekiCHConverter
 
         static uint ImageHeight = 0;
         static uint ImageWidth = 0;
+        static bool Override; // Manually set parameters
         static int OriginalFileSize;
 
         static byte[] CHFile;
@@ -52,11 +53,14 @@ namespace KisekiCHConverter
             for (int x = 0; x < args.Length; x++)
             {
                 if (args[x] == ("-f") | args[x] == ("--file")) { FilePath = args[x + 1]; }
+                else if (args[x] == ("--width")) { ImageWidth = Convert.ToUInt32(args[x + 1]); }
+                else if (args[x] == ("--height")) { ImageHeight = Convert.ToUInt32(args[x + 1]); }
                 else if (args[x] == ("-e") | args[x] == ("--extract")) { Action = 1; }
                 else if (args[x] == ("-c") | args[x] == ("--compress")) { Action = 2; }
                 else if (args[x] == ("--compressDS")) { Action = 2; CompressDS = true; }
                 else if (args[x] == ("--convert")) { ConvertToPNGFlag = true; }
                 else if (args[x] == ("--nodelete")) { DeleteFlag = false; }
+                else if (args[x] == ("--override")) { Override = true; }
                 else if (args[x] == ("--dumpchunks")) { DumpChunks = true; }
                 else if (args[x] == ("--nosplit")) { NoSplit = true; }
                 else if (args[x] == ("--spritesheetcompress")) { Action = 3; }
@@ -165,7 +169,7 @@ namespace KisekiCHConverter
                 {
                     // Set User Set Colour Profile if the user has specified one
                     if (ColorProfile != 0) { SetColourProfile(); }
-                    else { RunDetectionFilters(); }// Else Automatically Determine Bits Per Pixel for each Pixel
+                    if (! Override) { RunDetectionFilters(); }// Else Automatically Determine Bits Per Pixel for each Pixel
 
                     // Determine Width of Image if not Explicitly Set (In most filters, the height is fixed and not the width, so if the width is 0, it is calculated from the height).
                     if (ImageWidth == 0) { ImageWidth = (uint)((OriginalFileSize / 2) / ImageHeight); }
@@ -269,6 +273,9 @@ namespace KisekiCHConverter
             Console.WriteLine("     `--file` <file> | `-f` <file> : Specifies a file (a directory can also be specified for batch conversion).");
             Console.WriteLine("     `--extract`                   : Tells the tool to extract.");
             Console.WriteLine("     `--compress`                  : Tells the tool to compress.");
+            Console.WriteLine("     `--override`                  : Use on singular files with width and height. Tool doesn't try to auto-guess settings.");
+            Console.WriteLine("     `--width` <width>             : Set Width Explicitly, use only for singular files. (Helps Extract Image Assets which Automatically don't present as expected).");
+            Console.WriteLine("     `--height` <height>           : Set Height Explicitly, use only for singular files. (Helps Extract Image Assets which Automatically don't present as expected).");
             Console.WriteLine("     `--compressDS`                : Tells the tool to compress a ._DS file (DDS).");
             Console.WriteLine("     `--spritesheetcompress`       : Compresses the image to act akin to a spritesheet.");
             Console.WriteLine("     `--colorprofile` <profile> | `-u` <profile> : Specify a colour profile.\n");
@@ -827,7 +834,8 @@ namespace KisekiCHConverter
                 if (OriginalFileSizeKB >= 1024)
                 {
                     ImageHeight = 1024;
-                    if (OriginalFileSizeKB >= 4096) { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
+                    if (FileName.Contains("H_STCH")) { ImageHeight = 1024; ImageWidth = 1024; CHHeader = Properties.Resources.Header_u8888; HeaderName = "_u8888"; }
+                    else if (OriginalFileSizeKB >= 4096) { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                     else if (OriginalFileSizeKB >= 3072) { CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555"; }
                     else if (OriginalFileSizeKB >= 2048) { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                     else { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
@@ -836,8 +844,18 @@ namespace KisekiCHConverter
                 {
                     ImageHeight = 512;
                     if (FileName.StartsWith("HFACE")) { CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555"; }
+                    else if (FileName.StartsWith("H_KA")) { ImageHeight = 256; ImageWidth = 256; CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555"; }
+                    else if (FileName.StartsWith("H_EPI")) { ImageHeight = 352; ImageWidth = 416; CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                     else { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
-
+                }
+            }
+            else if (FileName.StartsWith("W_"))
+            {
+                if (OriginalFileSizeKB >= 1024)
+                {
+                    ImageHeight = 2048;
+                    ImageHeight = 1024;
+                    CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555";
                 }
             }
             else
@@ -845,7 +863,10 @@ namespace KisekiCHConverter
                 if (OriginalFileSizeKB >= 256)
                 {
                     ImageHeight = 512;
-                    if (OriginalFileSizeKB >= 1024) { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
+                    if (FileName.Contains("C_STCH")) { ImageHeight = 512; ImageWidth = 512; CHHeader = Properties.Resources.Header_u8888; HeaderName = "_u8888"; }
+                    else if (FileName.Contains("C_ORB")) { ImageHeight = 512; ImageWidth = 512; CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555"; }
+                    else if (FileName.StartsWith("M")) { ImageHeight = 1024; ImageWidth = 1024; CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
+                    else if (OriginalFileSizeKB >= 1024) { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                     else if (OriginalFileSizeKB >= 768) { CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555"; }
                     else if (OriginalFileSizeKB >= 512) { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                     else { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
@@ -859,6 +880,7 @@ namespace KisekiCHConverter
                 {
                     ImageHeight = 256;
                     if (FileName.StartsWith("BFACE") | FileName.StartsWith("CTI")) { CHHeader = Properties.Resources.Header_u1555; HeaderName = "_u1555"; }
+                    else if (FileName.StartsWith("C_EPI")) { ImageHeight = 176; ImageWidth = 208; CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                     else { CHHeader = Properties.Resources.Header_u4444; HeaderName = "_u4444"; }
                 }
             }
