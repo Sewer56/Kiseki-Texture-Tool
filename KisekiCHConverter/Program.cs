@@ -21,6 +21,7 @@ namespace KisekiCHConverter
         static bool DeleteFlag = true;
         static bool DumpChunks = false; // Whether to dump chunks instead of the sprites.
         static bool NoSplit = false;
+        static bool CompressDS = false; // Whether to convert the PNG/Other format to ._DS instead of ._CH
 
         static uint ImageHeight = 0;
         static uint ImageWidth = 0;
@@ -53,6 +54,7 @@ namespace KisekiCHConverter
                 if (args[x] == ("-f") | args[x] == ("--file")) { FilePath = args[x + 1]; }
                 else if (args[x] == ("-e") | args[x] == ("--extract")) { Action = 1; }
                 else if (args[x] == ("-c") | args[x] == ("--compress")) { Action = 2; }
+                else if (args[x] == ("--compressDS")) { Action = 2; CompressDS = true; }
                 else if (args[x] == ("--convert")) { ConvertToPNGFlag = true; }
                 else if (args[x] == ("--nodelete")) { DeleteFlag = false; }
                 else if (args[x] == ("--dumpchunks")) { DumpChunks = true; }
@@ -66,7 +68,7 @@ namespace KisekiCHConverter
             {
                 if (Directory.Exists(FilePath))
                 {
-                    string[] FilesInDirectory = Directory.GetFiles(FilePath, "*._CH");
+                    string[] FilesInDirectory = Directory.EnumerateFiles(FilePath, "*.*", SearchOption.AllDirectories).Where( s => s.EndsWith("._CH") || s.EndsWith("._DS") ).ToArray();
                     for (int x = 0; x < FilesInDirectory.Length; x++)
                     {
                         FilePath = FilesInDirectory[x];
@@ -124,36 +126,41 @@ namespace KisekiCHConverter
 
         private static void DecompressFile()
         {
-            // Copy file to Array
-            CHFile = File.ReadAllBytes(FilePath);
-
-            // Calculate the File Size
-            OriginalFileSize = CHFile.Length;
-
             // Get directory of file.
             FileDirectory = new FileInfo(FilePath).Directory.FullName;
             FileDirectory.Trim();
 
-            // Obtain the File Name of the File.
-            FileName = FilePath;
-            if (FilePath.Length > FileDirectory.Length) { FileName = FilePath.Substring(FileDirectory.Length + 1); }
-            // +1 compensates for resolved path
-
-            // Check if the file is a sprite sheet, and continue on a different path if it is :)
-            HandleChipSpriteSheet();
-
-            // If it was not a sprite sheet/chip, just convert as regular image.
-            if (! WasCPFile)
+            // Check if the file is already a DDS (_DS)
+            if (FilePath.EndsWith("._DS")) { File.Move(FilePath, FilePath.Substring(0, FilePath.Length - 4) + ".dds"); }
+            else
             {
-                // Set User Set Colour Profile if the user has specified one
-                if (ColorProfile != 0) { SetColourProfile(); }
-                else { RunDetectionFilters(); }// Else Automatically Determine Bits Per Pixel for each Pixel
+                // Copy file to Array
+                CHFile = File.ReadAllBytes(FilePath);
 
-                // Determine Width of Image if not Explicitly Set (In most filters, the height is fixed and not the width, so if the width is 0, it is calculated from the height).
-                if (ImageWidth == 0) { ImageWidth = (uint)((OriginalFileSize / 2) / ImageHeight); }
+                // Calculate the File Size
+                OriginalFileSize = CHFile.Length;
 
-                // Dump the File as DDS
-                DumpFileAsDDS();
+                // Obtain the File Name of the File.
+                FileName = FilePath;
+                if (FilePath.Length > FileDirectory.Length) { FileName = FilePath.Substring(FileDirectory.Length + 1); }
+                // +1 compensates for resolved path
+
+                // Check if the file is a sprite sheet, and continue on a different path if it is :)
+                HandleChipSpriteSheet();
+
+                // If it was not a sprite sheet/chip, just convert as regular image.
+                if (!WasCPFile)
+                {
+                    // Set User Set Colour Profile if the user has specified one
+                    if (ColorProfile != 0) { SetColourProfile(); }
+                    else { RunDetectionFilters(); }// Else Automatically Determine Bits Per Pixel for each Pixel
+
+                    // Determine Width of Image if not Explicitly Set (In most filters, the height is fixed and not the width, so if the width is 0, it is calculated from the height).
+                    if (ImageWidth == 0) { ImageWidth = (uint)((OriginalFileSize / 2) / ImageHeight); }
+
+                    // Dump the File as DDS
+                    DumpFileAsDDS();
+                }
             }
         }
 
@@ -186,10 +193,14 @@ namespace KisekiCHConverter
             if (DeleteFlag) { File.Delete(FilePath); }
 
             // Remove The File Header Using Arrays, Write All Bytes and Move the File to the new extension
-            CHFile = File.ReadAllBytes(FilePath + ".dds");
-            CHFile = CHFile.Skip(0x80).ToArray();
-            File.WriteAllBytes(FilePath + ".dds", CHFile);
-            File.Move(FilePath + ".dds", FilePath.Substring(0, FilePath.Length - 4) + "._CH");
+            if (CompressDS == true) { File.Move(FilePath + ".dds", FilePath.Substring(0, FilePath.Length - 4) + "._DS"); }
+            else
+            {
+                CHFile = File.ReadAllBytes(FilePath + ".dds");
+                CHFile = CHFile.Skip(0x80).ToArray();
+                File.WriteAllBytes(FilePath + ".dds", CHFile);
+                File.Move(FilePath + ".dds", FilePath.Substring(0, FilePath.Length - 4) + "._CH");
+            }
         }
 
         private static void ConvertFileToDDS(string FilePath)
@@ -236,15 +247,17 @@ namespace KisekiCHConverter
             Console.WriteLine("This tool was quickly written to fill a small gap in the lack of a dedicated\n" +
                               "conversion utility to convert ._CH files, functionality similar akin to falcnvrt.");
             Console.WriteLine("-----------------------");
-            Console.WriteLine("Usage ( => DDS): KisekiCHConverter.exe --extract -f <CHFile>");
-            Console.WriteLine("Usage ( => CH): KisekiCHConverter.exe --compress -f <CHFile> -u 2");
+            Console.WriteLine("Usage ( => DDS): KisekiCHConverter.exe --extract -f <CHFile/CHDirectory>");
+            Console.WriteLine("Usage ( => CH): KisekiCHConverter.exe --compress -f <CHFile/CHDirectory> -u 2");
+            Console.WriteLine("Usage ( => DS): KisekiCHConverter.exe --compressDS -f <CHFile/CHDirectory> -u 2");
             Console.WriteLine("Usage ( => CH/CP, Single File): KisekiCHConverter.exe --spritesheetcompress -f <CHFile> -u 2");
             Console.WriteLine("Usage ( => CH/CP, Multiple Frames): KisekiCHConverter.exe --spritesheetcompress -f <CHDirectory> -u 2\n");
             Console.WriteLine("Supported Formats: \n| Tested | PNG, DDS \n| Untested | TGA, BMP, GIF, PPM, JPG, TIFF (.tif), .CEL, PSD, .rgb, *.bw, .rgba\n");
             Console.WriteLine("Arguments:");
-            Console.WriteLine("     `--file` <file> | `-f` <file> : Specifies a file.");
+            Console.WriteLine("     `--file` <file> | `-f` <file> : Specifies a file (a directory can also be specified for batch conversion).");
             Console.WriteLine("     `--extract`                   : Tells the tool to extract.");
             Console.WriteLine("     `--compress`                  : Tells the tool to compress.");
+            Console.WriteLine("     `--compressDS`                : Tells the tool to compress a ._DS file (DDS).");
             Console.WriteLine("     `--spritesheetcompress`       : Compresses the image to act akin to a spritesheet.");
             Console.WriteLine("     `--colorprofile` <profile> | `-u` <profile> : Specify a colour profile.\n");
             Console.WriteLine("     `--convert`                   : Automatically converts the output images to PNGs.");
