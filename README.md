@@ -75,3 +75,8 @@ I might replace this in the future and use another DirectX Texture supporting li
 As for functions involving things such as arguments and path building, I cannot guarantee that this software will work on Linux for the time being, since I've not tested it myself yet and I might need to patch this tool with alternate arguments for nvdxt if so. If it doesn't yet work, getting it to work on Linux will probably be hassle free, although I bet this should work on Wine already, I was thinking of native builds running and compiled via Mono.
 
 PS. I'm a Linux user myself.
+
+# Random Note (from 2019)
+
+Sorry, when I originally wrote this, I was a poor programmer.
+I'll make the code better someday, I promise.
